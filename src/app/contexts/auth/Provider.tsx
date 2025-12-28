@@ -161,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    // این تابع در فایل jwt.ts کوکی را حذف می‌کند
     setSession(null);
     dispatch({ type: "LOGOUT" });
   };

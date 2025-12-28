@@ -16,6 +16,8 @@ import { Link } from "react-router";
 // Local Imports
 import { Avatar, AvatarDot, Button } from "@/components/ui";
 import { ColorType } from "@/constants/app";
+// اضافه کردن context برای دسترسی به تابع logout
+import { useAuthContext } from "@/app/contexts/auth/context";
 
 // Define Link Types
 interface LinkItem {
@@ -73,6 +75,19 @@ const links: LinkItem[] = [
 // ----------------------------------------------------------------------
 
 export function Profile() {
+  // استخراج تابع logout و اطلاعات کاربر از کانتکست
+  const { logout, user } = useAuthContext();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // با اجرای این تابع، کوکی پاک شده و isAuthenticated فالس می‌شود
+      // و روتینگ پروژه شما کاربر را به صفحه لاگین هدایت می‌کند.
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   return (
     <Popover className="relative">
       <PopoverButton
@@ -85,7 +100,6 @@ export function Profile() {
           <AvatarDot color="success" className="ltr:right-0 rtl:left-0" />
         }
         className="cursor-pointer"
-
       />
       <Transition
         enter="duration-200 ease-out"
@@ -97,12 +111,12 @@ export function Profile() {
       >
         <PopoverPanel
           anchor={{ to: "right end", gap: 12 }}
-          className="z-70 flex w-64 flex-col rounded-lg border border-gray-150 bg-white shadow-soft transition dark:border-dark-600 dark:bg-dark-700 dark:shadow-none"
+          className="border-gray-150 shadow-soft dark:border-dark-600 dark:bg-dark-700 z-70 flex w-64 flex-col rounded-lg border bg-white transition dark:shadow-none"
         >
           {({ close }) => (
             <>
               {/* User Info */}
-              <div className="flex items-center gap-4 rounded-t-lg bg-gray-100 px-4 py-5 dark:bg-dark-800">
+              <div className="dark:bg-dark-800 flex items-center gap-4 rounded-t-lg bg-gray-100 px-4 py-5">
                 <Avatar
                   size={14}
                   src="/images/avatar/avatar-12.jpg"
@@ -110,25 +124,26 @@ export function Profile() {
                 />
                 <div>
                   <Link
-                    className="text-base font-medium text-gray-700 hover:text-primary-600 focus:text-primary-600 dark:text-dark-100 dark:hover:text-primary-400 dark:focus:text-primary-400"
+                    className="hover:text-primary-600 focus:text-primary-600 dark:text-dark-100 dark:hover:text-primary-400 dark:focus:text-primary-400 text-base font-medium text-gray-700"
                     to="/settings/general"
                   >
-                   امیرحسین فدایی
+                    {/* نمایش نام داینامیک کاربر در صورت وجود */}
+                    {user?.name || "امیرحسین فدایی"}
                   </Link>
-                  <p className="mt-0.5 text-xs text-gray-400 dark:text-dark-300">
+                  <p className="dark:text-dark-300 mt-0.5 text-xs text-gray-400">
                     طراح محصول
                   </p>
                 </div>
               </div>
 
               {/* Navigation Links */}
-              <div className="flex flex-col pb-5 pt-2">
+              <div className="flex flex-col pt-2 pb-5">
                 {links.map((link) => (
                   <Link
                     key={link.id}
                     to={link.to}
                     onClick={() => close()}
-                    className="group flex items-center gap-3 px-4 py-2 tracking-wide outline-hidden transition-all hover:bg-gray-100 focus:bg-gray-100 dark:hover:bg-dark-600 dark:focus:bg-dark-600"
+                    className="group dark:hover:bg-dark-600 dark:focus:bg-dark-600 flex items-center gap-3 px-4 py-2 tracking-wide outline-hidden transition-all hover:bg-gray-100 focus:bg-gray-100"
                   >
                     <Avatar
                       size={8}
@@ -138,10 +153,10 @@ export function Profile() {
                       <link.Icon className="size-4.5" />
                     </Avatar>
                     <div>
-                      <h2 className="font-medium text-gray-800 transition-colors group-hover:text-primary-600 group-focus:text-primary-600 dark:text-dark-100 dark:group-hover:text-primary-400 dark:group-focus:text-primary-400">
+                      <h2 className="group-hover:text-primary-600 group-focus:text-primary-600 dark:text-dark-100 dark:group-hover:text-primary-400 dark:group-focus:text-primary-400 font-medium text-gray-800 transition-colors">
                         {link.title}
                       </h2>
-                      <div className="truncate text-xs text-gray-400 dark:text-dark-300">
+                      <div className="dark:text-dark-300 truncate text-xs text-gray-400">
                         {link.description}
                       </div>
                     </div>
@@ -150,7 +165,11 @@ export function Profile() {
 
                 {/* Logout Button */}
                 <div className="px-4 pt-4">
-                  <Button className="w-full gap-2">
+                  <Button
+                    onClick={handleLogout}
+                    className="w-full gap-2"
+                    variant="flat" // یا هر استایلی که مد نظر دارید
+                  >
                     <ArrowLeftStartOnRectangleIcon className="size-4.5" />
                     <span>خروج</span>
                   </Button>
