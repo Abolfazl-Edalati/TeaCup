@@ -22,7 +22,7 @@ type ButtonOwnProps<E extends ElementType = "button"> = {
   unstyled?: boolean;
   isGlow?: boolean;
   component?: E;
-}
+};
 
 export type ButtonProps<E extends ElementType = "button"> =
   PolymorphicComponentProps<E, ButtonOwnProps<E>>;
@@ -46,10 +46,7 @@ const neutralVariants: Record<Variant, string> = {
 };
 
 const ButtonInner = forwardRef(
-  <E extends ElementType = "button">(
-    props: any,
-    ref: ForwardedRef<any>,
-  ) => {
+  <E extends ElementType = "button">(props: any, ref: ForwardedRef<any>) => {
     const {
       component,
       className,
@@ -75,21 +72,21 @@ const ButtonInner = forwardRef(
           "btn-base",
           !unstyled
             ? [
-              "btn",
-              isIcon && "shrink-0 p-0",
-              color === "neutral"
-                ? [
-                  neutralVariants[variant],
-                  isGlow &&
-                  "dark:shadow-dark-450/5 shadow-lg shadow-gray-200/50",
-                ]
-                : [
-                  setThisClass(color),
-                  variants[variant],
-                  isGlow &&
-                  "shadow-soft shadow-this/50 dark:shadow-this/50 dark:shadow-lg",
-                ],
-            ]
+                "btn",
+                isIcon && "shrink-0 p-0",
+                color === "neutral"
+                  ? [
+                      neutralVariants[variant],
+                      isGlow &&
+                        "dark:shadow-dark-450/5 shadow-lg shadow-gray-200/50",
+                    ]
+                  : [
+                      setThisClass(color),
+                      variants[variant],
+                      isGlow &&
+                        "shadow-soft shadow-this/50 dark:shadow-this/50 dark:shadow-lg",
+                    ],
+              ]
             : color !== "neutral" && setThisClass(color),
           className,
         )}

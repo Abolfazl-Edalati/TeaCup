@@ -1,14 +1,14 @@
-import * as Yup from 'yup'
+import * as Yup from "yup";
 
 export interface AuthFormValues {
-    username: string
-    password: string
+  phone: string;
+  otp: string;
 }
 
 export const schema = Yup.object().shape({
-    username: Yup.string()
-        .trim()
-        .required('Product Title Required'),
-    password: Yup.string().trim()
-        .required('Product Title Required'),
-})
+  phone: Yup.string()
+    .trim()
+    .required("شماره موبایل الزامی است")
+    .matches(/^09\d{9}$/, "فرمت شماره موبایل اشتباه است"),
+  otp: Yup.string().strip(), // در مرحله اول اعتبارسنجی OTP را نادیده می‌گیرد
+});

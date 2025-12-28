@@ -3,7 +3,7 @@ import { useEffect, useReducer, ReactNode } from "react";
 
 // Local Imports
 import axios from "@/utils/axios";
-import { isTokenValid, setSession } from "@/utils/jwt";
+import { isTokenValid, setSession, getCookie } from "@/utils/jwt";
 import { AuthProvider as AuthContext, AuthContextType } from "./context";
 import { User } from "@/@types/user";
 
@@ -82,19 +82,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        const authToken = window.localStorage.getItem("authToken");
+        // خواندن توکن از کوکی به جای LocalStorage
+        const authToken = getCookie("authToken");
 
         if (authToken && isTokenValid(authToken)) {
           setSession(authToken);
 
-          const response = await axios.get<{ user: User }>("/user/profile");
-          const { user } = response.data;
+          // در حالت واقعی این درخواست پروفایل را از سرور می‌گیرد
+          // فعلاً برای تست بدون API، یک کاربر فرضی می‌سازیم
+          // const response = await axios.get<{ user: User }>("/user/profile");
+          // const { user } = response.data;
+          const mockUser: User = {
+            id: "1",
+            name: "کاربر تستی",
+            email: "test@me.com",
+          };
 
           dispatch({
             type: "INITIALIZE",
             payload: {
               isAuthenticated: true,
-              user,
+              user: mockUser,
             },
           });
         } else {
@@ -121,29 +129,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     init();
   }, []);
 
-  const login = async (credentials: { username: string; password: string }) => {
+  const login = async (credentials: { phone: string; otp: string }) => {
     dispatch({ type: "LOGIN_REQUEST" });
 
     try {
-      const response = await axios.post<{ authToken: string; user: User }>(
-        "/login",
-        credentials,
-      );
-      const { authToken, user } = response.data;
+      // شبیه‌سازی API (در آینده اینجا axios.post استفاده می‌شود)
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      if (
-        typeof authToken !== "string" ||
-        typeof user !== "object" ||
-        user === null
-      ) {
-        throw new Error("Response is not valid");
-      }
+      const mockToken =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzkxMTIzNDV9.signature"; // یک توکن تستی با انقضای بالا
+      const mockUser: User = {
+        id: "1",
+        name: "کاربر تستی",
+        email: "test@me.com",
+      };
 
-      setSession(authToken);
+      setSession(mockToken);
 
       dispatch({
         type: "LOGIN_SUCCESS",
-        payload: { user },
+        payload: { user: mockUser },
       });
     } catch (err) {
       dispatch({

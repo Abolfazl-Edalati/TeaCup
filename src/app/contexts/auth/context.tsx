@@ -7,7 +7,7 @@ export interface AuthContextType {
   isInitialized: boolean;
   errorMessage: string | null;
   user: User | null;
-  login: (credentials: { username: string; password: string }) => Promise<void>;
+  login: (credentials: { phone: string; otp: string }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
