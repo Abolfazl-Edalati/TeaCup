@@ -7,7 +7,12 @@ export interface AuthContextType {
   isInitialized: boolean;
   errorMessage: string | null;
   user: User | null;
-  login: (credentials: { phone: string; otp: string }) => Promise<void>;
+  login: (credentials: {
+    twoFactorCode: string;
+    rememberMe: boolean;
+  }) => Promise<void>;
+  // اضافه کردن این خط:
+  initiateAuth: (phone: string) => Promise<{ status: string }>;
   logout: () => Promise<void>;
 }
 

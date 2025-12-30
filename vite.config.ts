@@ -12,4 +12,13 @@ export default defineConfig({
       "@": path.join(__dirname, "src"),
     },
   },
+  server: {
+    proxy: {
+      "/v1": {
+        target: "https://dev.xperia.top",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 });

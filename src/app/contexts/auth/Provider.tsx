@@ -27,6 +27,7 @@ const initialState: AuthContextType = {
   errorMessage: null,
   user: null,
   login: async () => {},
+  initiateAuth: async () => ({ status: "" }),
   logout: async () => {},
 };
 
@@ -41,30 +42,19 @@ const reducerHandlers: Record<
     isInitialized: true,
     user: action.payload?.user ?? null,
   }),
-
-  LOGIN_REQUEST: (state) => ({
-    ...state,
-    isLoading: true,
-  }),
-
+  LOGIN_REQUEST: (state) => ({ ...state, isLoading: true, errorMessage: null }),
   LOGIN_SUCCESS: (state, action) => ({
     ...state,
     isAuthenticated: true,
     isLoading: false,
     user: action.payload?.user ?? null,
   }),
-
   LOGIN_ERROR: (state, action) => ({
     ...state,
     errorMessage: action.payload?.errorMessage ?? "An error occurred",
     isLoading: false,
   }),
-
-  LOGOUT: (state) => ({
-    ...state,
-    isAuthenticated: false,
-    user: null,
-  }),
+  LOGOUT: (state) => ({ ...state, isAuthenticated: false, user: null }),
 };
 
 // Reducer function
@@ -82,102 +72,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        // خواندن توکن از کوکی به جای LocalStorage
         const authToken = getCookie("authToken");
-
         if (authToken && isTokenValid(authToken)) {
           setSession(authToken);
-
-          // در حالت واقعی این درخواست پروفایل را از سرور می‌گیرد
-          // فعلاً برای تست بدون API، یک کاربر فرضی می‌سازیم
-          // const response = await axios.get<{ user: User }>("/user/profile");
-          // const { user } = response.data;
-          const mockUser: User = {
-            id: "1",
-            name: "کاربر تستی",
-            email: "test@me.com",
-          };
-
+          // تلاش برای گرفتن اطلاعات واقعی کاربر
+          const response = await axios.get("/v1/auth/me");
           dispatch({
             type: "INITIALIZE",
-            payload: {
-              isAuthenticated: true,
-              user: mockUser,
-            },
+            payload: { isAuthenticated: true, user: response.data.user },
           });
         } else {
           dispatch({
             type: "INITIALIZE",
-            payload: {
-              isAuthenticated: false,
-              user: null,
-            },
+            payload: { isAuthenticated: false, user: null },
           });
         }
       } catch (err) {
-        console.error(err);
+        setSession(null);
         dispatch({
           type: "INITIALIZE",
-          payload: {
-            isAuthenticated: false,
-            user: null,
-          },
+          payload: { isAuthenticated: false, user: null },
         });
       }
     };
-
     init();
   }, []);
 
-  const login = async (credentials: { phone: string; otp: string }) => {
-    dispatch({ type: "LOGIN_REQUEST" });
-
+  const initiateAuth = async (phone: string) => {
     try {
-      // شبیه‌سازی API (در آینده اینجا axios.post استفاده می‌شود)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const mockToken =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzkxMTIzNDV9.signature"; // یک توکن تستی با انقضای بالا
-      const mockUser: User = {
-        id: "1",
-        name: "کاربر تستی",
-        email: "test@me.com",
-      };
-
-      setSession(mockToken);
-
-      dispatch({
-        type: "LOGIN_SUCCESS",
-        payload: { user: mockUser },
+      const response = await axios.post("/v1/auth/initiate", {
+        phoneNumber: phone,
       });
-    } catch (err) {
+      return response.data;
+    } catch (err: any) {
+      const message = err.response?.data?.message || "خطا در ارسال کد";
+      dispatch({ type: "LOGIN_ERROR", payload: { errorMessage: message } });
+      console.log(phone);
+      throw new Error(message);
+    }
+  };
+
+  const login = async (credentials: {
+    twoFactorCode: string;
+    rememberMe: boolean;
+  }) => {
+    dispatch({ type: "LOGIN_REQUEST" });
+    try {
+      // ارسال کد تایید و وضعیت یادآوری بدون شماره موبایل
+      const response = await axios.post("/v1/auth/login", credentials);
+      console.log("پاسخ موفقیت‌آمیز سرور:", response.data);
+
+      const { authToken, user } = response.data;
+      setSession(authToken);
+      dispatch({ type: "LOGIN_SUCCESS", payload: { user } });
+    } catch (err: any) {
+      console.error("جزئیات خطای سرور:", err.response?.data);
       dispatch({
         type: "LOGIN_ERROR",
         payload: {
-          errorMessage: err instanceof Error ? err.message : "Login failed",
+          errorMessage: err.response?.data?.message || "کد وارد شده صحیح نیست",
         },
       });
+      throw err;
     }
   };
 
   const logout = async () => {
-    // این تابع در فایل jwt.ts کوکی را حذف می‌کند
     setSession(null);
     dispatch({ type: "LOGOUT" });
   };
 
-  if (!children) {
-    return null;
-  }
+  if (!children) return null;
 
   return (
-    <AuthContext
-      value={{
-        ...state,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext value={{ ...state, login, initiateAuth, logout }}>
       {children}
     </AuthContext>
   );
