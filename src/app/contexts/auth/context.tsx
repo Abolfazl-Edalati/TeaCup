@@ -7,11 +7,16 @@ export interface AuthContextType {
   isInitialized: boolean;
   errorMessage: string | null;
   user: User | null;
-  login: (credentials: {
+  login: (payload: {
     twoFactorCode: string;
     rememberMe: boolean;
   }) => Promise<void>;
-  // اضافه کردن این خط:
+  register: (payload: {
+    twoFactorCode: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  }) => Promise<void>;
   initiateAuth: (phone: string) => Promise<{ status: string }>;
   logout: () => Promise<void>;
 }

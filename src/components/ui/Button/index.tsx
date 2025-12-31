@@ -22,6 +22,7 @@ type ButtonOwnProps<E extends ElementType = "button"> = {
   unstyled?: boolean;
   isGlow?: boolean;
   component?: E;
+  loading?: boolean;
 };
 
 export type ButtonProps<E extends ElementType = "button"> =

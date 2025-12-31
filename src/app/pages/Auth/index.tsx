@@ -3,6 +3,8 @@ import {
   KeyIcon,
   ArrowRightIcon,
   ArrowPathIcon,
+  UserIcon,
+  EnvelopeIcon,
 } from "@heroicons/react/24/outline";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
@@ -13,11 +15,17 @@ import { Page } from "@/components/shared/Page";
 import Logo from "@/assets/appLogo.svg?react";
 
 export default function SignIn() {
-  const { login, initiateAuth, errorMessage, isLoading } = useAuthContext();
+  const {
+    login,
+    initiateAuth,
+    register: registerUser,
+    errorMessage,
+    isLoading,
+  } = useAuthContext();
   const [step, setStep] = useState<"PHONE" | "OTP">("PHONE");
   const [phoneValue, setPhoneValue] = useState<string>("");
 
-  // استیت تایمر و وضعیت نوع درخواست (برای تشخیص ۳ یا ۵ دقیقه)
+  // استیت تایمر و وضعیت نوع درخواست
   const [timeLeft, setTimeLeft] = useState(0);
   const [isRegister, setIsRegister] = useState(false);
 
@@ -25,11 +33,18 @@ export default function SignIn() {
     register,
     handleSubmit,
     trigger,
-    getValues,
     resetField,
     formState: { errors },
   } = useForm<AuthFormValues>({
     resolver: yupResolver(schema),
+    context: { step, isRegister },
+    defaultValues: {
+      phone: "",
+      otp: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+    },
   });
 
   // مدیریت معکوس تایمر
@@ -41,32 +56,37 @@ export default function SignIn() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  // تابع کمکی برای فرمت زمان (00:00)
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const startTimer = (type: "login" | "register") => {
-    setTimeLeft(type === "register" ? 300 : 180); // ۵ دقیقه یا ۳ دقیقه
-  };
-
   const handleInitiate = async (phone: string) => {
     try {
       const formattedPhone = phone.startsWith("+98") ? phone : `+98${phone}`;
-      const response = await initiateAuth(formattedPhone);
+      const response = (await initiateAuth(formattedPhone)) as any;
 
-      // فرض بر این است که سرور در پاسخ می‌گوید این کاربر ثبت‌نامی است یا لاگین
-      const type = response?.isNewUser ? "register" : "login";
-      setIsRegister(response?.isNewUser || false);
+      console.log("Server Response:", response);
 
+      // تشخیص کاربر جدید بر اساس پاسخ سرور شما
+      const isNew =
+        response?.type === "REGISTER_INITIATED" || response?.isNewUser === true;
+
+      setIsRegister(isNew);
       setPhoneValue(formattedPhone);
       setStep("OTP");
-      resetField("otp"); // پاک کردن مقدار قبلی اینپوت OTP
-      startTimer(type);
+
+      // پاک کردن فیلدها برای شروع تازه در مرحله OTP
+      resetField("otp");
+      resetField("firstName");
+      resetField("lastName");
+      resetField("email");
+
+      // تنظیم تایمر (5 دقیقه برای ثبت‌نام، 3 دقیقه برای ورود)
+      setTimeLeft(isNew ? 300 : 180);
     } catch (error) {
-      console.error("Error initiating...");
+      console.error("Initiate Error", error);
     }
   };
 
@@ -76,10 +96,23 @@ export default function SignIn() {
       if (isPhoneValid) {
         await handleInitiate(data.phone);
       }
+      return;
+    }
+
+    if (!data.otp) return;
+
+    const code = data.otp;
+
+    if (isRegister) {
+      await registerUser({
+        twoFactorCode: code,
+        firstName: data.firstName ?? "",
+        lastName: data.lastName ?? "",
+        email: data.email ?? "",
+      });
     } else {
-      const currentValues = getValues();
       await login({
-        twoFactorCode: currentValues.otp,
+        twoFactorCode: code,
         rememberMe: true,
       });
     }
@@ -93,7 +126,11 @@ export default function SignIn() {
             <Logo className="mx-auto size-16" />
             <div className="mt-4">
               <h2 className="text-2xl font-semibold text-gray-600">
-                {step === "PHONE" ? "خوش آمدید" : "تایید شماره"}
+                {step === "PHONE"
+                  ? "خوش آمدید"
+                  : isRegister
+                    ? "تکمیل ثبت‌نام"
+                    : "تایید شماره"}
               </h2>
               <p className="mt-1 text-gray-400">
                 {step === "PHONE"
@@ -105,14 +142,14 @@ export default function SignIn() {
 
           <Card className="mt-5 rounded-lg p-5 lg:p-7">
             <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {step === "PHONE" ? (
                   <Input
                     dir="ltr"
                     label="شماره موبایل"
                     placeholder="9381234567"
                     suffix={
-                      <span className="border-s border-gray-500 px-1 text-gray-500">
+                      <span className="border-s border-gray-500 px-2 text-gray-500">
                         +98
                       </span>
                     }
@@ -120,44 +157,73 @@ export default function SignIn() {
                     error={errors?.phone?.message}
                   />
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
+                    {/* فیلدهای مخصوص ثبت‌نام (فقط وقتی isRegister مثبت است) */}
+                    {isRegister && (
+                      <div className="animate-in fade-in slide-in-from-top-2 space-y-4 duration-500">
+                        <Input
+                          label="نام"
+                          placeholder="نام"
+                          prefix={<UserIcon className="size-5" />}
+                          {...register("firstName")}
+                          error={errors?.firstName?.message}
+                        />
+                        <Input
+                          label="نام خانوادگی"
+                          placeholder="نام خانوادگی"
+                          prefix={<UserIcon className="size-5" />}
+                          {...register("lastName")}
+                          error={errors?.lastName?.message}
+                        />
+                        <Input
+                          dir="ltr"
+                          label="ایمیل"
+                          placeholder="example@example.com"
+                          prefix={<EnvelopeIcon className="size-5" />}
+                          {...register("email")}
+                          error={errors?.email?.message}
+                        />
+                      </div>
+                    )}
+
                     <Input
                       dir="ltr"
                       label="کد تایید"
                       placeholder="******"
-                      className="px-0"
                       prefix={<KeyIcon className="size-5" />}
                       {...register("otp")}
                       error={errors?.otp?.message}
                       autoFocus
                     />
-                    {timeLeft > 0 ? (
-                      <span className="flex items-center gap-1 text-gray-500">
-                        زمان باقی‌مانده:
-                        <span className="text-primary-600 font-mono font-bold">
-                          {formatTime(timeLeft)}
+
+                    <div className="flex items-center justify-between px-1 text-sm">
+                      {timeLeft > 0 ? (
+                        <span className="flex items-center gap-1 text-gray-500">
+                          زمان باقی‌مانده:
+                          <span className="text-primary-600 font-mono font-bold">
+                            {formatTime(timeLeft)}
+                          </span>
                         </span>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        // اضافه کردن وضعیت isLoading برای جلوگیری از کلیک دوباره
-                        disabled={isLoading}
-                        onClick={() => handleInitiate(phoneValue)}
-                        className={`flex items-center gap-1 font-medium hover:underline ${
-                          isLoading
-                            ? "cursor-not-allowed text-gray-400"
-                            : "text-primary-600"
-                        }`}
-                      >
-                        {isLoading ? (
-                          <ArrowPathIcon className="size-4 animate-spin" /> // آیکون در حال چرخش
-                        ) : (
-                          <ArrowPathIcon className="size-4" />
-                        )}
-                        {isLoading ? "در حال ارسال..." : "ارسال مجدد کد"}
-                      </button>
-                    )}
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isLoading}
+                          onClick={() => handleInitiate(phoneValue)}
+                          className={`flex items-center gap-1 font-medium hover:underline ${
+                            isLoading
+                              ? "cursor-not-allowed text-gray-400"
+                              : "text-primary-600"
+                          }`}
+                        >
+                          {isLoading ? (
+                            <ArrowPathIcon className="size-4 animate-spin" />
+                          ) : (
+                            <ArrowPathIcon className="size-4" />
+                          )}
+                          {isLoading ? "در حال ارسال..." : "ارسال مجدد کد"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -173,7 +239,11 @@ export default function SignIn() {
                 loading={isLoading}
                 disabled={step === "OTP" && timeLeft === 0 && !isLoading}
               >
-                {step === "PHONE" ? "ارسال کد تایید" : "ورود"}
+                {step === "PHONE"
+                  ? "ارسال کد تایید"
+                  : isRegister
+                    ? "ثبت‌نام و ورود"
+                    : "ورود"}
               </Button>
 
               {step === "OTP" && (
@@ -182,6 +252,7 @@ export default function SignIn() {
                   onClick={() => {
                     setStep("PHONE");
                     setTimeLeft(0);
+                    setIsRegister(false);
                   }}
                   className="hover:text-primary-600 mt-6 flex w-full items-center justify-center gap-1 text-xs text-gray-500"
                 >

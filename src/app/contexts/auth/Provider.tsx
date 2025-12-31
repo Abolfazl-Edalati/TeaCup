@@ -27,6 +27,7 @@ const initialState: AuthContextType = {
   errorMessage: null,
   user: null,
   login: async () => {},
+  register: async () => {},
   initiateAuth: async () => ({ status: "" }),
   logout: async () => {},
 };
@@ -137,6 +138,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const register = async (payload: {
+    twoFactorCode: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  }) => {
+    dispatch({ type: "LOGIN_REQUEST" });
+
+    try {
+      const response = await axios.post("/v1/auth/register", payload);
+      console.log("پاسخ موفقیت‌آمیز ثبت‌نام:", response.data);
+
+      const { authToken, user } = response.data;
+      setSession(authToken);
+      dispatch({ type: "LOGIN_SUCCESS", payload: { user } });
+    } catch (err: any) {
+      console.error("خطای ثبت‌نام:", err.response?.data);
+      dispatch({
+        type: "LOGIN_ERROR",
+        payload: {
+          errorMessage: err.response?.data?.message || "خطا در ثبت‌نام",
+        },
+      });
+      throw err;
+    }
+  };
+
   const logout = async () => {
     setSession(null);
     dispatch({ type: "LOGOUT" });
@@ -145,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   if (!children) return null;
 
   return (
-    <AuthContext value={{ ...state, login, initiateAuth, logout }}>
+    <AuthContext value={{ ...state, login, register, initiateAuth, logout }}>
       {children}
     </AuthContext>
   );
