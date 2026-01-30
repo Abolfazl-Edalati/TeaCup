@@ -13,14 +13,14 @@ export default function AuthGuard() {
 
   const location = useLocation();
 
-  if (!isAuthenticated) {
-    return (
-      <Navigate
-        to={`${GHOST_ENTRY_PATH}?${REDIRECT_URL_KEY}=${location.pathname}`}
-        replace
-      />
-    );
-  }
+  // if (!isAuthenticated) {
+  //   return (
+  //     <Navigate
+  //       to={`${GHOST_ENTRY_PATH}?${REDIRECT_URL_KEY}=${location.pathname}`}
+  //       replace
+  //     />
+  //   );
+  // }
 
   return <>{outlet}</>;
 }
